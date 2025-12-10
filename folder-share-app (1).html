@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condivisione Cartella via Email</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="email"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="email"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-input-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: block;
+            text-align: center;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .file-input-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            display: block;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            display: block;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+            display: block;
+        }
+        
+        .progress {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .auth-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .auth-btn {
+            background: #ffc107;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Condividi Cartella via Email</h1>
+        <p class="subtitle">Comprimi, carica su Drive e invia il link via email</p>
+        
+        <div class="auth-section" id="authSection">
+            <p><strong>⚠️ Autenticazione richiesta</strong></p>
+            <p style="margin-top: 8px; font-size: 14px;">Devi autorizzare l'applicazione ad accedere a Google Drive e Gmail.</p>
+            <button class="auth-btn" onclick="handleAuthClick()">Autorizza con Google</button>
+        </div>
+        
+        <div class="form-group">
+            <label>Seleziona cartella da condividere</label>
+            <div class="file-input-wrapper">
+                <label class="file-input-button" for="folderInput">
+                    📁 Scegli Cartella
+                </label>
+                <input type="file" id="folderInput" webkitdirectory directory multiple>
+            </div>
+            <div class="file-info" id="fileInfo" style="display: none;"></div>
+        </div>
+        
+        <div class="form-group">
+            <label>Email destinatario</label>
+            <input type="email" id="recipientEmail" placeholder="destinatario@esempio.com">
+        </div>
+        
+        <div class="form-group">
+            <label>Oggetto email</label>
+            <input type="text" id="emailSubject" placeholder="Condivisione file">
+        </div>
+        
+        <button class="btn" id="sendBtn" onclick="processAndSend()" disabled>
+            Comprimi, Carica e Invia
+        </button>
+        
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+        
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const CLIENT_ID = '712245659218-k9ols1umvt5fi09npbsqedpct70g9oqm.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyA67Fx4tp004YojQzXr1xKEwRX0Y-w6xKI';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send';
+
+        let accessToken = null;
+        let selectedFiles = [];
+        let gapiLoaded = false;
+        let gisLoaded = false;
+        let tokenClient;
+
+        // Carica Google API
+        function loadGoogleAPIs() {
+            // Carica GAPI
+            const gapiScript = document.createElement('script');
+            gapiScript.src = 'https://apis.google.com/js/api.js';
+            gapiScript.onload = () => {
+                gapi.load('client', async () => {
+                    await gapi.client.init({
+                        apiKey: API_KEY,
+                        discoveryDocs: [
+                            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                            'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'
+                        ],
+                    });
+                    gapiLoaded = true;
+                    console.log('GAPI caricato');
+                });
+            };
+            document.head.appendChild(gapiScript);
+
+            // Carica GIS
+            const gisScript = document.createElement('script');
+            gisScript.src = 'https://accounts.google.com/gsi/client';
+            gisScript.onload = () => {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (response) => {
+                        if (response.error) {
+                            showStatus('❌ Errore autenticazione: ' + response.error, 'error');
+                            return;
+                        }
+                        accessToken = response.access_token;
+                        document.getElementById('authSection').style.display = 'none';
+                        showStatus('✅ Autenticazione completata!', 'success');
+                        updateSendButton();
+                    },
+                });
+                gisLoaded = true;
+                console.log('GIS caricato');
+            };
+            document.head.appendChild(gisScript);
+        }
+
+        // Inizializza al caricamento della pagina
+        window.addEventListener('load', loadGoogleAPIs);
+
+        function handleAuthClick() {
+            if (!gisLoaded) {
+                showStatus('⏳ Caricamento librerie in corso...', 'info');
+                return;
+            }
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+        }
+
+        // Gestione selezione file
+        document.getElementById('folderInput').addEventListener('change', function(e) {
+            selectedFiles = Array.from(e.target.files);
+            if (selectedFiles.length > 0) {
+                const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+                const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                document.getElementById('fileInfo').style.display = 'block';
+                document.getElementById('fileInfo').innerHTML = 
+                    `<strong>${selectedFiles.length}</strong> file selezionati (${sizeMB} MB)`;
+                updateSendButton();
+            }
+        });
+
+        document.getElementById('recipientEmail').addEventListener('input', updateSendButton);
+        document.getElementById('emailSubject').addEventListener('input', updateSendButton);
+
+        function updateSendButton() {
+            const email = document.getElementById('recipientEmail').value;
+            const subject = document.getElementById('emailSubject').value;
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = !(selectedFiles.length > 0 && email && subject && accessToken);
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        // Funzione per caricare su Drive con monitoraggio progresso
+        function uploadToDrive(file, metadata, token, onProgress) {
+            return new Promise((resolve, reject) => {
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', file);
+
+                const xhr = new XMLHttpRequest();
+                
+                // Monitora il progresso dell'upload
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percent = (e.loaded / e.total) * 100;
+                        onProgress(percent);
+                    }
+                });
+
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response.id);
+                    } else {
+                        reject(new Error('Errore caricamento su Drive: ' + xhr.statusText));
+                    }
+                });
+
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Errore di rete durante il caricamento'));
+                });
+
+                xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                xhr.send(form);
+            });
+        }
+
+        async function processAndSend() {
+            const recipientEmail = document.getElementById('recipientEmail').value;
+            const emailSubject = document.getElementById('emailSubject').value;
+            const sendBtn = document.getElementById('sendBtn');
+            
+            sendBtn.disabled = true;
+            
+            try {
+                // Step 1: Comprimi i file
+                showStatus('📦 Compressione file in corso...', 'info');
+                updateProgress(10, 'Compressione...');
+                
+                const zip = new JSZip();
+                const folderName = selectedFiles[0].webkitRelativePath.split('/')[0];
+                
+                for (let file of selectedFiles) {
+                    const relativePath = file.webkitRelativePath;
+                    zip.file(relativePath, file);
+                }
+                
+                updateProgress(30, 'Generazione ZIP...');
+                const zipBlob = await zip.generateAsync({
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 6 }
+                }, function(metadata) {
+                    updateProgress(30 + (metadata.percent * 0.3), `Compressione: ${metadata.percent.toFixed(0)}%`);
+                });
+                
+                // Step 2: Carica su Google Drive con monitoraggio avanzamento
+                showStatus('☁️ Caricamento su Google Drive...', 'info');
+                updateProgress(60, 'Caricamento su Drive...');
+                
+                const metadata = {
+                    name: folderName + '.zip',
+                    mimeType: 'application/zip'
+                };
+                
+                // Caricamento con XMLHttpRequest per monitorare il progresso
+                const fileId = await uploadToDrive(zipBlob, metadata, accessToken, (percent) => {
+                    updateProgress(60 + (percent * 0.15), `Caricamento su Drive: ${percent.toFixed(0)}%`);
+                });
+                
+                updateProgress(75, 'Creazione link condiviso...');
+                
+                // Rendi il file pubblico
+                const permissionResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        role: 'reader',
+                        type: 'anyone'
+                    })
+                });
+                
+                if (!permissionResponse.ok) {
+                    throw new Error('Errore creazione permessi: ' + permissionResponse.statusText);
+                }
+                
+                const driveLink = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+                
+                // Step 3: Invia email
+                showStatus('📧 Invio email...', 'info');
+                updateProgress(85, 'Invio email...');
+                
+                const emailBody = `Ciao,\n\nTi condivido il file: ${folderName}.zip\n\nPuoi scaricarlo dal seguente link:\n${driveLink}\n\nCordiali saluti`;
+                
+                const email = [
+                    'To: ' + recipientEmail,
+                    'Subject: ' + emailSubject,
+                    'Content-Type: text/plain; charset=utf-8',
+                    '',
+                    emailBody
+                ].join('\n');
+                
+                const encodedEmail = btoa(unescape(encodeURIComponent(email)))
+                    .replace(/\+/g, '-')
+                    .replace(/\//g, '_')
+                    .replace(/=+$/, '');
+                
+                const sendResponse = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        raw: encodedEmail
+                    })
+                });
+                
+                if (!sendResponse.ok) {
+                    throw new Error('Errore invio email: ' + sendResponse.statusText);
+                }
+                
+                updateProgress(100, 'Completato!');
+                showStatus('✅ Email inviata con successo! Link: ' + driveLink, 'success');
+                
+            } catch (error) {
+                console.error('Errore:', error);
+                showStatus('❌ Errore: ' + error.message, 'error');
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
